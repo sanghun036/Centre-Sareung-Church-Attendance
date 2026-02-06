@@ -15,7 +15,7 @@ def load_member_data():
 
 df_members = load_member_data()
 
-st.title("📅 주일 출석 체크")
+st.title("📅 안식일 출석 체크")
 
 # --- 상단 필터 영역 ---
 with st.container():
