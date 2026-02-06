@@ -84,9 +84,54 @@ if not filtered_members.empty:
         attendance_results[name] = {"출석여부": status, "불참사유": reason}
         st.write("---")
 
-    if st.button("✅ 출석 데이터 확정", use_container_width=True, type="primary"):
-        # 확정 데이터 전송 로직 (생략 - 위와 동일)
-        st.success("데이터를 전송합니다...")
+    # --- 확정 / 취소 버튼 영역 ---
+    btn_col1, btn_col2 = st.columns(2)
+    
+    with btn_col1:
+        if st.button("✅ 출석 데이터 확정", use_container_width=True, type="primary"):
+            # 1. 전송할 데이터 준비
+            new_records = []
+            for name, res in attendance_results.items():
+                new_records.append({
+                    "년도": selected_year,
+                    "날짜": selected_date.strftime("%Y-%m-%d"),
+                    "이름": name,
+                    "목양반": selected_group,
+                    "출석여부": res["출석여부"],
+                    "불참사유": res["불참사유"]
+                })
+            
+            # 2. 전송 중 상태 표시 (st.status 사용)
+            with st.status("⛪ 구글 시트에 기록 중...", expanded=True) as status:
+                try:
+                    st.write("기존 기록을 불러오는 중...")
+                    # 최신 데이터를 가져오기 위해 ttl=0 설정
+                    existing_data = conn.read(worksheet="출석체크", ttl=0)
+                    
+                    st.write("새로운 데이터를 추가 중...")
+                    # 기존 데이터 아래에 새 데이터 붙이기
+                    updated_df = pd.concat([existing_data, pd.DataFrame(new_records)], ignore_index=True)
+                    
+                    st.write("최종 저장 중 (잠시만 기다려 주세요)...")
+                    # 합쳐진 데이터를 시트에 업데이트
+                    conn.update(worksheet="출석체크", data=updated_df)
+                    
+                    status.update(label="✅ 기록 완료!", state="complete", expanded=False)
+                    st.balloons()
+                    st.success(f"{selected_group} {len(new_records)}명의 기록이 성공적으로 저장되었습니다.")
+                    
+                    # 기록 후 세션 초기화가 필요하면 여기에 추가
+                    # st.rerun()
+
+                except Exception as e:
+                    status.update(label="❌ 전송 실패", state="error")
+                    st.error(f"오류 내용: {e}")
+
+    with btn_col2:
+        if st.button("❌ 전체 초기화", use_container_width=True):
+            st.rerun()
+
+
 else:
     st.warning("⚠️ 해당 조건에 맞는 구성원이 없습니다.")
     st.info("시트의 '년도'와 '목양반' 컬럼 값이 드롭다운에서 선택한 값과 정확히 일치하는지 확인해 주세요.")
