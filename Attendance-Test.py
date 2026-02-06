@@ -32,7 +32,7 @@ for s in students:
             # 추후 여기에 구글 시트 저장 코드가 들어갑니다.
             
     with cols[2]:
-        if st.button("지각", key=f"late_{s}"):
+        if st.button("불참", key=f"late_{s}"):
             st.warning(f"{s} 지각")
             # 추후 여기에 구글 시트 저장 코드가 들어갑니다.
 
