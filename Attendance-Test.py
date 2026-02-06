@@ -28,7 +28,7 @@ except Exception as e:
     st.error(f"시트 데이터를 불러오는데 실패했습니다: {e}")
     st.stop()
 
-st.title("⛪ 사릉중앙교회 주일 출석")
+st.title("⛪ 사릉중앙교회 안식일 출석")
 
 # --- 상단 필터 영역 ---
 with st.container():
