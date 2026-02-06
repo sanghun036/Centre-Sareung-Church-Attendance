@@ -69,7 +69,7 @@ if st.session_state.search_clicked:
     ].copy()
 
     if not group_members.empty:
-        # 정렬 로직
+        # 정렬 로직 (출석중 -> 장기 미결석 -> 전출)
         status_order = {"출석중": 0, "장기 미결석": 1, "전출": 2}
         group_members['sort_priority'] = group_members['상태'].apply(lambda x: status_order.get(x, 3))
         group_members = group_members.sort_values('sort_priority').drop('sort_priority', axis=1)
@@ -108,16 +108,27 @@ if st.session_state.search_clicked:
         if st.button("✅ 안식일 출석 최종 확정", use_container_width=True, type="primary"):
             with st.status("기록 중...", expanded=True) as status:
                 try:
-                    # 1. 출석체크 기록
+                    # 1. 출석체크 기록 (중복 방지 적용)
+                    st.write("출석 데이터 병합 및 중복 확인 중...")
                     existing_att = conn.read(worksheet="출석체크", ttl=0)
+                    
                     new_records = []
+                    formatted_date = selected_date.strftime("%Y-%m-%d")
                     for name, res in attendance_results.items():
                         new_records.append({
-                            "년도": selected_year, "날짜": selected_date.strftime("%Y-%m-%d"),
+                            "년도": selected_year, "날짜": formatted_date,
                             "이름": name, "목양반": selected_group,
                             "출석여부": res["출석"], "불참사유": res["사유"]
                         })
-                    updated_att = pd.concat([existing_att, pd.DataFrame(new_records)], ignore_index=True)
+                    
+                    # 기존 데이터 + 새 데이터 합치기
+                    new_df = pd.DataFrame(new_records)
+                    updated_att = pd.concat([existing_att, new_df], ignore_index=True)
+                    
+                    # 핵심: [날짜, 이름]이 겹치면 마지막에 들어온(keep='last') 데이터만 남기고 중복 제거
+                    updated_att = updated_att.drop_duplicates(subset=['날짜', '이름'], keep='last')
+                    
+                    st.write("구글 시트에 최종 기록 중...")
                     conn.update(worksheet="출석체크", data=updated_att)
 
                     # 2. 구성원정보 업데이트
@@ -125,10 +136,10 @@ if st.session_state.search_clicked:
                         df_members.loc[(df_members["이름"] == name) & (df_members["목양반"] == selected_group), "상태"] = res["변경상태"]
                     conn.update(worksheet="구성원정보", data=df_members)
 
-                    status.update(label="✅ 저장 완료!", state="complete", expanded=False)
+                    status.update(label="✅ 저장 완료! 행복한 안식일 되세요.", state="complete", expanded=False)
                     st.balloons()
-                    st.success("성공적으로 저장되었습니다.")
+                    st.success("데이터가 안전하게 저장되었습니다.")
                 except Exception as e:
-                    st.error(f"오류: {e}")
+                    st.error(f"저장 중 오류 발생: {e}")
     else:
         st.warning("등록된 명단이 없습니다.")
