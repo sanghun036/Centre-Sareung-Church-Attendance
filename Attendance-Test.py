@@ -120,3 +120,6 @@ if not filtered_members.empty:
 
 else:
     st.info("선택한 조건에 맞는 구성원이 없습니다.")
+
+st.write("선택된 값:", selected_year, selected_group)
+st.write("시트 데이터 샘플:", df_members[["년도", "목양반", "상태"]].head())
